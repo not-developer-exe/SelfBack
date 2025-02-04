@@ -10,7 +10,7 @@ app.get('/', (req, res)=>{
 
 app.get('/check', (req, res)=>{
     console.log(req.cookies.isDead);
-    res.send('check terminal bsdk')
+    res.send('check terminal')
 })
 
 app.get('/dead', (req, res)=>{
