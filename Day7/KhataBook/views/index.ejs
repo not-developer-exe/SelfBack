@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khaatabook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+    <main class="w-full h-screen flex flex-col items-center px-6 py-10">
+        <nav class="flex w-full max-w-5xl justify-between items-center py-4 px-6 bg-gray-800 rounded-lg shadow-lg backdrop-blur-lg">
+            <h3 class="text-3xl font-bold text-blue-400 tracking-tight">Khaatabook</h3>
+            <div class="flex gap-6">
+                <a class="text-gray-300 hover:text-white transition" href="/">Home</a>
+                <a class="text-gray-300 hover:text-white transition" href="/create">+ New Hisaab</a>
+            </div>
+        </nav>
+
+        <div class="mt-10 w-full max-w-5xl">
+            <h3 class="text-2xl font-semibold tracking-tight mb-6">All Hisaab</h3>
+
+            <% if(files.length>0) { %>
+                <% files.forEach((file)=>{ %>
+                    <div class="hisaab flex justify-between items-center p-4 mb-4 bg-gray-800 rounded-lg shadow-lg hover:scale-105 transition transform duration-300">
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-xl font-medium"><%= file.split(".")[0] %></h3>
+                            <a href="/hisab/<%= file %>" class="text-blue-400 hover:text-blue-300 transition">
+                                <i class="ri-arrow-right-line text-xl"></i>
+                            </a>
+                        </div>
+                        <div class="flex gap-4">
+                            <a href="/edit/<%= file %>" class="text-yellow-400 hover:text-yellow-300 transition">
+                                <i class="ri-pencil-line text-xl"></i>
+                            </a>
+                            <a href="/delete/<%= file %>" class="text-red-400 hover:text-red-300 transition">
+                                <i class="ri-delete-bin-line text-xl"></i>
+                            </a>
+                        </div>
+                    </div>
+                <% }) %>
+            <%} else {%>
+                <h3 class="text-gray-500 text-center text-lg">Nothing to show, create Hisaabs to see something.</h3>
+            <% } %>
+        </div>
+    </main>
+</body>
+</html>

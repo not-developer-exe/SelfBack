@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khaatabook - Hisaab Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+    <main class="w-full h-screen flex flex-col items-center px-6 py-10">
+        <nav class="flex w-full max-w-5xl justify-between items-center py-4 px-6 bg-gray-800 rounded-lg shadow-lg backdrop-blur-lg">
+            <h3 class="text-3xl font-bold text-blue-400 tracking-tight">Khaatabook</h3>
+            <div class="flex gap-6">
+                <a class="text-gray-300 hover:text-white transition" href="/">Home</a>
+                <a class="text-gray-300 hover:text-white transition" href="/create">+ New Hisaab</a>
+            </div>
+        </nav>
+
+        <div class="mt-10 w-full max-w-5xl p-6 bg-gray-800 rounded-lg shadow-lg backdrop-blur-lg">
+            <h3 class="text-2xl font-semibold tracking-tight mb-6">Hisaab of <span class="text-blue-400"><%= filename.split('.')[0] %></span></h3>
+            <div class="bg-gray-700 p-4 rounded-lg text-gray-300 text-lg shadow-inner">
+                <%= filedata %>
+            </div>
+            <div class="flex gap-4 mt-6">
+                <a class="px-4 py-2 text-white border border-blue-500 rounded-lg bg-blue-500 hover:bg-blue-400 transition-all" 
+                    href="/edit/<%= filename %>">
+                    <i class="ri-pencil-line mr-2"></i>Edit This Hisaab
+                </a>
+                <a class="px-4 py-2 text-white border border-red-500 rounded-lg bg-red-500 hover:bg-red-400 transition-all" 
+                    href="/delete/<%= filename %>">
+                    <i class="ri-delete-bin-line mr-2"></i>Delete Hisaab
+                </a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
