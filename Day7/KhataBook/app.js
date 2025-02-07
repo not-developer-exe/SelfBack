@@ -19,12 +19,12 @@ app.get("/create", (req, res) => {
   res.render("create");
 });
 
-app.post('/update/:filename', (req, res)=>{
-    fs.writeFile(`./hisab/${req.params.filename}`, req.body.content, (err)=>{
+app.post("/update/:filename", (req, res) => {
+  fs.writeFile(`./hisab/${req.params.filename}`, req.body.content, (err) => {
     if (err) return res.status(500).send("Something went Wrong!!");
-    res.redirect('/')
-    })
-})
+    res.redirect("/");
+  });
+});
 
 app.post("/createhisab", (req, res) => {
   var date = new Date();
@@ -38,30 +38,27 @@ app.post("/createhisab", (req, res) => {
   });
 });
 
-
-
-app.get('/edit/:filename', (req, res)=>{
-    fs.readFile(`./hisab/${req.params.filename}`, 'utf-8', (err, filedata)=>{
+app.get("/edit/:filename", (req, res) => {
+  fs.readFile(`./hisab/${req.params.filename}`, "utf-8", (err, filedata) => {
     if (err) return res.status(500).render("error");
-    res.render("edit", {filedata, filename: req.params.filename})
-    
-    })
-})
+    res.render("edit", { filedata, filename: req.params.filename });
+  });
+});
 
-app.get('/hisab/:filename', (req, res)=>{
-    fs.readFile(`./hisab/${req.params.filename}`,'utf-8', (err, filedata)=>{
-    if (err) return res.status(500).render('error');
-    res.render('hisab', {filedata, filename: req.params.filename})
-    })
-})
+app.get("/hisab/:filename", (req, res) => {
+  fs.readFile(`./hisab/${req.params.filename}`, "utf-8", (err, filedata) => {
+    if (err) return res.status(500).render("error");
+    res.render("hisab", { filedata, filename: req.params.filename });
+  });
+});
 
-app.get('/delete/:filename', (req,res)=>{
-    fs.unlink(`./hisab/${req.params.filename}`, (err)=>{
-        if (err) return res.status(500).render('error');
-        res.redirect('/')
-    })
-})
- 
+app.get("/delete/:filename", (req, res) => {
+  fs.unlink(`./hisab/${req.params.filename}`, (err) => {
+    if (err) return res.status(500).render("error");
+    res.redirect("/");
+  });
+});
+
 app.get("/error", (req, res) => {
   res.render("error");
 });
