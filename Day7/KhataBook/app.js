@@ -1,16 +1,18 @@
 const express = require("express");
 const app = express();
 const path = require("path");
-const fs = require("fs");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const CryptoJS = require("crypto-js");
+const dotenv = require("dotenv");
 
 const connectDB = require("./db/db");
 const User = require("./db/User");
+const Hisab = require("./db/Hisab");
 
+dotenv.config();
 connectDB();
 
 // Middleware
@@ -25,19 +27,10 @@ app.use(
     secret: "your-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: "mongodb://127.0.0.1:27017/khataBookDB",
-    }),
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
     cookie: { maxAge: 24 * 60 * 60 * 1000 },
   })
 );
-
-// Ensure `hisab` and `metadata.json` exist
-if (!fs.existsSync("./hisab")) fs.mkdirSync("./hisab");
-
-const metadataPath = "./hisab/metadata.json";
-if (!fs.existsSync(metadataPath))
-  fs.writeFileSync(metadataPath, JSON.stringify({}, null, 2));
 
 // Middleware to check authentication
 const isAuthenticated = (req, res, next) => {
@@ -45,15 +38,21 @@ const isAuthenticated = (req, res, next) => {
   res.redirect("/login");
 };
 
-// Home Route
-app.get("/", isAuthenticated, (req, res) => {
-  fs.readdir("./hisab", (err, files) => {
-    if (err) return res.render("error", { message: "Something went wrong!" });
+// Home Route (Fetch user-specific hisabs)
+// Home Route (Fetch User-Specific Hisabs)
+app.get("/", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const hisabs = await Hisab.find({ userId });
 
-    files = files.filter((file) => file !== "metadata.json");
-    let metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-    res.render("index", { files, metadata, session: req.session });
-  });
+    res.render("index", {
+      files: hisabs, // ✅ Fetch files from DB
+      session: req.session,
+    });
+  } catch (error) {
+    console.error("Error fetching hisabs:", error);
+    res.render("error", { message: "Something went wrong!" });
+  }
 });
 
 // Signup Route
@@ -62,12 +61,10 @@ app.get("/signup", (req, res) => res.render("signup", { error: null }));
 app.post("/signup", async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password)
-      return res.render("signup", { error: "All fields are required!" });
+    if (!username || !password) return res.render("signup", { error: "All fields are required!" });
 
     const existingUser = await User.findOne({ username });
-    if (existingUser)
-      return res.render("signup", { error: "User already exists!" });
+    if (existingUser) return res.render("signup", { error: "User already exists!" });
 
     const hashedPassword = await bcrypt.hash(password.trim(), 10);
     await new User({ username, password: hashedPassword }).save();
@@ -99,183 +96,153 @@ app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
-// Create Hisab
-app.get("/create", isAuthenticated, (req, res) =>
-  res.render("create", { error: null })
-);
+// Create Hisab (Store in MongoDB)
+app.get("/create", isAuthenticated, (req, res) => res.render("create", { error: null }));
 
-app.post("/createhisab", isAuthenticated, (req, res) => {
+app.post("/createhisab", isAuthenticated, async (req, res) => {
   try {
     const { filename, content, password, encrypt } = req.body;
-    if (!filename || !content)
-      return res.render("create", {
-        error: "Filename and content are required!",
-      });
+    if (!filename || !content) return res.render("create", { error: "Filename and content are required!" });
 
-    const filePath = `./hisab/${filename}.txt`;
-    const createdAt = new Date().toISOString();
-    let fileContent = encrypt
-      ? CryptoJS.AES.encrypt(content, password).toString()
-      : content;
+    let fileContent = content;
+    if (encrypt) {
+      fileContent = CryptoJS.AES.encrypt(content, password).toString();
+    }
 
-    fs.writeFile(filePath, fileContent, (err) => {
-      if (err) return res.render("create", { error: "Failed to create file!" });
-
-      let metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-      metadata[filename] = { createdAt, encrypted: !!encrypt };
-      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-
-      res.redirect("/");
+    await Hisab.create({
+      userId: req.session.user.id,
+      filename,
+      content: fileContent,
+      encrypted: !!encrypt,
     });
-  } catch {
+
+    res.redirect("/");
+  } catch (error) {
+    console.error("Create Hisab Error:", error);
     res.render("create", { error: "Something went wrong!" });
   }
 });
 
 // View Hisab (Ask Password for Encrypted Files)
-app.get("/hisab/:filename", isAuthenticated, (req, res) => {
-  const filename = decodeURIComponent(req.params.filename);
-  const filePath = `./hisab/${filename}`;
-  const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-
-  if (!fs.existsSync(filePath))
-    return res.render("error", { message: "File not found!" });
-
-  if (metadata[filename.replace(".txt", "")]?.encrypted) {
-    return res.render("decrypt", { filename, error: null });
-  }
-
-  fs.readFile(filePath, "utf-8", (err, filedata) => {
-    if (err) return res.render("error", { message: "Error reading file!" });
-    res.render("hisab", { filedata, filename });
-  });
-});
-
-// Decrypt Encrypted Hisab for Viewing
-app.post("/decrypt/:filename", isAuthenticated, (req, res) => {
-  const filename = decodeURIComponent(req.params.filename);
-  const filePath = `./hisab/${filename}`;
-  const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-  const { password } = req.body;
-
-  if (
-    !fs.existsSync(filePath) ||
-    !metadata[filename.replace(".txt", "")]?.encrypted
-  ) {
-    return res.render("error", { message: "Invalid request!" });
-  }
-
-  const encryptedContent = fs.readFileSync(filePath, "utf-8");
+app.get("/hisab/:filename", isAuthenticated, async (req, res) => {
   try {
-    const bytes = CryptoJS.AES.decrypt(encryptedContent, password);
-    const decryptedContent = bytes.toString(CryptoJS.enc.Utf8);
+    const file = await Hisab.findOne({ userId: req.session.user.id, filename: req.params.filename }).lean();
 
-    if (!decryptedContent) throw new Error("Decryption failed!");
+    if (!file) return res.render("error", { message: "File not found!" });
 
-    res.render("hisab", { filename, filedata: decryptedContent });
-  } catch {
-    res.render("decrypt", { filename, error: "Incorrect password!" });
-  }
-});
-
-// Decrypt Encrypted Hisab for Editing
-app.post("/decrypt_edit/:filename", isAuthenticated, (req, res) => {
-  const filename = decodeURIComponent(req.params.filename);
-  const filePath = `./hisab/${filename}`;
-  const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-  const { password } = req.body;
-
-  if (
-    !fs.existsSync(filePath) ||
-    !metadata[filename.replace(".txt", "")]?.encrypted
-  ) {
-    return res.render("error", { message: "Invalid request!" });
-  }
-
-  const encryptedContent = fs.readFileSync(filePath, "utf-8");
-  try {
-    const bytes = CryptoJS.AES.decrypt(encryptedContent, password);
-    const decryptedContent = bytes.toString(CryptoJS.enc.Utf8);
-
-    if (!decryptedContent) throw new Error("Decryption failed!");
-
-    res.render("edit", {
-      filename,
-      filedata: decryptedContent,
-      isEncrypted: true,
-      error: null,
-    });
-  } catch {
-    res.render("decrypt_edit", { filename, error: "Incorrect password!" });
-  }
-});
-
-// Edit Hisab (Decryption First)
-app.get("/edit/:filename", isAuthenticated, (req, res) => {
-  const filename = decodeURIComponent(req.params.filename);
-  const filePath = `./hisab/${filename}`;
-  const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-
-  if (!fs.existsSync(filePath))
-    return res.render("error", { message: "File not found!" });
-
-  const isEncrypted =
-    metadata[filename.replace(".txt", "")]?.encrypted || false;
-
-  if (isEncrypted) {
-    return res.render("decrypt_edit", { filename, error: null });
-  }
-
-  fs.readFile(filePath, "utf-8", (err, filedata) => {
-    if (err) return res.render("error", { message: "Error reading file!" });
-    res.render("edit", { filename, filedata, isEncrypted, error: null });
-  });
-});
-
-// Update Hisab (After Editing)
-app.post("/edit/:filename", isAuthenticated, (req, res) => {
-  const filename = decodeURIComponent(req.params.filename);
-  const filePath = `./hisab/${filename}`;
-  const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-  const { content, password } = req.body;
-
-  if (!fs.existsSync(filePath))
-    return res.render("error", { message: "File not found!" });
-
-  let newContent = content;
-  if (metadata[filename.replace(".txt", "")]?.encrypted) {
-    if (!password) {
-      return res.render("edit", {
-        filename,
-        filedata: content,
-        isEncrypted: true,
-        error: "Password required to save encrypted file!",
-      });
+    if (file.encrypted) {
+      return res.render("decrypt", { filename: file.filename, error: null });
     }
-    newContent = CryptoJS.AES.encrypt(content, password).toString();
-  }
 
-  fs.writeFile(filePath, newContent, (err) => {
-    if (err) return res.render("error", { message: "Failed to update file!" });
-    res.redirect("/");
-  });
+    res.render("hisab", { filedata: file.content, filename: file.filename });
+  } catch (error) {
+    console.error("View Hisab Error:", error);
+    res.render("error", { message: "Something went wrong!" });
+  }
 });
 
-// Delete Hisab (Fully Fixed)
-app.post("/delete/:filename", isAuthenticated, (req, res) => {
+app.post("/decrypt/:filename", isAuthenticated, async (req, res) => {
   const filename = decodeURIComponent(req.params.filename);
-  const filePath = `./hisab/${filename}`;
+  const userId = req.session.user.id;
 
-  if (!fs.existsSync(filePath))
-    return res.render("error", { message: "File not found!" });
+  try {
+      const file = await Hisab.findOne({ filename, userId });
 
-  fs.unlinkSync(filePath);
+      if (!file || !file.encrypted) {
+          return res.render("error", { message: "Invalid request!" });
+      }
 
-  let metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
-  delete metadata[filename];
-  fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+      const { password } = req.body;
+      const bytes = CryptoJS.AES.decrypt(file.content, password);
+      const decryptedContent = bytes.toString(CryptoJS.enc.Utf8);
 
-  res.redirect("/");
+      if (!decryptedContent) {
+          return res.render("decrypt", { filename, error: "Incorrect password!" });
+      }
+
+      res.render("hisab", { filename, filedata: decryptedContent });
+  } catch (error) {
+      res.render("error", { message: "Something went wrong!" });
+  }
+});
+
+// Decrypt Hisab
+app.post("/decrypt_edit/:filename", isAuthenticated, async (req, res) => {
+  const filename = decodeURIComponent(req.params.filename);
+  const userId = req.session.user.id;
+
+  try {
+      const file = await Hisab.findOne({ filename, userId });
+
+      if (!file || !file.encrypted) {
+          return res.render("error", { message: "Invalid request!" });
+      }
+
+      const { password } = req.body;
+      const bytes = CryptoJS.AES.decrypt(file.content, password);
+      const decryptedContent = bytes.toString(CryptoJS.enc.Utf8);
+
+      if (!decryptedContent) {
+          return res.render("decrypt_edit", { filename, error: "Incorrect password!" });
+      }
+
+      res.render("edit", { filename, filedata: decryptedContent, isEncrypted: true, error: null });
+  } catch (error) {
+      res.render("error", { message: "Something went wrong!" });
+  }
+});
+
+// Edit Hisab
+app.get("/edit/:filename", isAuthenticated, async (req, res) => {
+  try {
+    const file = await Hisab.findOne({ userId: req.session.user.id, filename: req.params.filename }).lean();
+
+    if (!file) return res.render("error", { message: "File not found!" });
+
+    if (file.encrypted) {
+      return res.render("decrypt_edit", { filename: file.filename, error: null });
+    }
+
+    res.render("edit", { filename: file.filename, filedata: file.content, isEncrypted: file.encrypted });
+  } catch (error) {
+    console.error("Edit Hisab Error:", error);
+    res.render("error", { message: "Something went wrong!" });
+  }
+});
+
+// Update Hisab
+app.post("/edit/:filename", isAuthenticated, async (req, res) => {
+  try {
+    const { content, password } = req.body;
+    const file = await Hisab.findOne({ userId: req.session.user.id, filename: req.params.filename });
+
+    if (!file) return res.render("error", { message: "File not found!" });
+
+    let updatedContent = content;
+    if (file.encrypted) {
+      if (!password) return res.render("edit", { filename: file.filename, filedata: content, error: "Password required!" });
+      updatedContent = CryptoJS.AES.encrypt(content, password).toString();
+    }
+
+    file.content = updatedContent;
+    await file.save();
+
+    res.redirect("/");
+  } catch (error) {
+    console.error("Update Hisab Error:", error);
+    res.render("error", { message: "Something went wrong!" });
+  }
+});
+
+// Delete Hisab
+app.post("/delete/:filename", isAuthenticated, async (req, res) => {
+  try {
+    await Hisab.deleteOne({ userId: req.session.user.id, filename: req.params.filename });
+    res.redirect("/");
+  } catch (error) {
+    console.error("Delete Hisab Error:", error);
+    res.render("error", { message: "Failed to delete file!" });
+  }
 });
 
 // Start Server

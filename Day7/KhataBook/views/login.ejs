@@ -7,32 +7,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+<body class="bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 flex items-center justify-center min-h-screen">
 
-    <div class="bg-gray-800 p-8 rounded-lg shadow-lg w-96 backdrop-blur-lg">
-        <h2 class="text-3xl font-bold text-center mb-6 text-blue-400">Welcome Back!</h2>
+    <div class="bg-white p-8 rounded-lg shadow-xl w-96 backdrop-blur-lg border border-gray-200">
+        <h2 class="text-3xl font-bold text-center mb-6 text-purple-500">Welcome Back!</h2>
+
+        <!-- Error Message (If Any) -->
+        <% if (error) { %>
+            <div class="mb-4 p-3 bg-red-100 text-red-600 text-sm rounded-lg flex items-center">
+                <i class="ri-error-warning-line mr-2"></i> <%= error %>
+            </div>
+        <% } %>
 
         <form action="/login" method="POST" class="space-y-4">
             <div class="relative">
                 <input type="text" name="username" placeholder="Username" required 
-                    class="w-full p-3 pl-10 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="w-full p-3 pl-10 bg-gray-50 border border-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-sm">
                 <i class="ri-user-line absolute left-3 top-3 text-gray-400"></i>
             </div>
 
             <div class="relative">
                 <input type="password" name="password" placeholder="Password" required 
-                    class="w-full p-3 pl-10 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="w-full p-3 pl-10 bg-gray-50 border border-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-sm">
                 <i class="ri-lock-line absolute left-3 top-3 text-gray-400"></i>
             </div>
 
             <button type="submit" 
-                class="w-full bg-blue-500 hover:bg-blue-400 transition duration-300 ease-in-out transform hover:scale-105 text-white font-bold py-3 rounded">
+                class="w-full bg-purple-500 hover:bg-purple-400 transition duration-300 ease-in-out transform hover:scale-105 text-white font-bold py-3 rounded-lg shadow-md">
                 Login
             </button>
         </form>
 
-        <p class="mt-4 text-center text-gray-400">
-            New here? <a href="/signup" class="text-blue-400 hover:underline">Signup</a>
+        <p class="mt-4 text-center text-gray-600">
+            New here? <a href="/signup" class="text-purple-500 hover:underline">Signup</a>
         </p>
     </div>
 

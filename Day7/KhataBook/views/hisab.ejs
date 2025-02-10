@@ -9,30 +9,38 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
 </head>
 
-<body class="bg-gray-900 text-white font-sans">
+<body class="bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 font-sans">
     <main class="w-full h-screen flex flex-col items-center px-6 py-10">
-        <nav class="flex w-full max-w-5xl justify-between items-center py-4 px-6 bg-gray-800 rounded-lg shadow-lg backdrop-blur-lg">
-            <h3 class="text-3xl font-bold text-blue-400 tracking-tight">Khaatabook</h3>
+        
+        <!-- Navbar -->
+        <nav class="flex w-full max-w-5xl justify-between items-center py-4 px-6 bg-white border border-gray-200 rounded-lg shadow-lg">
+            <h3 class="text-3xl font-bold text-purple-500 tracking-tight">Khaatabook</h3>
             <div class="flex gap-6">
-                <a class="text-gray-300 hover:text-white transition" href="/">Home</a>
-                <a class="text-gray-300 hover:text-white transition" href="/create">+ New Hisaab</a>
+                <a class="text-gray-600 hover:text-purple-500 transition" href="/">Home</a>
+                <a class="text-gray-600 hover:text-purple-500 transition" href="/create">+ New Hisaab</a>
             </div>
         </nav>
 
-        <div class="mt-10 w-full max-w-5xl p-6 bg-gray-800 rounded-lg shadow-lg backdrop-blur-lg">
-            <h3 class="text-2xl font-semibold tracking-tight mb-6">Hisaab of <span class="text-blue-400"><%= filename.split('.')[0] %></span></h3>
-            <div class="bg-gray-700 p-4 rounded-lg text-gray-300 text-lg shadow-inner">
+        <!-- Hisaab Content -->
+        <div class="mt-10 w-full max-w-5xl p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+            <h3 class="text-2xl font-semibold tracking-tight mb-6 text-purple-500">
+                Hisaab of <span class="text-purple-700"><%= filename.split('.')[0] %></span>
+            </h3>
+
+            <div class="bg-gray-50 p-4 rounded-lg text-gray-600 text-lg shadow-inner border border-gray-300">
                 <%= filedata %>
             </div>
+
             <div class="flex gap-4 mt-6">
                 <a class="px-4 py-2 text-white border border-blue-500 rounded-lg bg-blue-500 hover:bg-blue-400 transition-all" 
                     href="/edit/<%= filename %>">
-                    <i class="ri-pencil-line mr-2"></i>Edit This Hisaab
+                    <i class="ri-pencil-line mr-2"></i> Edit This Hisaab
                 </a>
-                <a class="px-4 py-2 text-white border border-red-500 rounded-lg bg-red-500 hover:bg-red-400 transition-all" 
-                    href="/delete/<%= filename %>">
-                    <i class="ri-delete-bin-line mr-2"></i>Delete Hisaab
-                </a>
+                <form action="/delete/<%= filename %>" method="POST">
+                    <button type="submit" class="px-4 py-2 text-white border border-red-500 rounded-lg bg-red-500 hover:bg-red-400 transition-all">
+                        <i class="ri-delete-bin-line mr-2"></i> Delete Hisaab
+                    </button>
+                </form>
             </div>
         </div>
     </main>
